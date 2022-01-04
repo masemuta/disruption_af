@@ -1,4 +1,4 @@
-# Disrution Araucaria Forest
+# Disruption Araucaria Forest
 
 
 # Disrupting a socioecological system: how Traditional Ecological Knowledge could be the key to preserve Araucaria Forest in Brazil under climate change?
