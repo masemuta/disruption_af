@@ -1,0 +1,443 @@
+setwd("D:/OneDrive/Doutorado_2020/Cap_5")
+
+## call packages
+
+library(ggplot2) 
+library(viridis)
+library(dplyr)
+library(data.table)
+library(tidyr)
+library(readr)
+library(devtools)
+library(skimr)
+library(dlookr)
+library(chron)
+library(tidyverse)
+require(ggplot2)
+require(network)
+require(igraph)
+require(sna)
+require(ggnet)
+require(ergm)
+require(intergraph)
+require(RColorBrewer)
+library(hrbrthemes)
+library(ggalt)
+library(ggExtra)
+library(tidyverse)
+library(viridis)
+library(patchwork)
+library(circlize)
+library(networkD3)
+library(bipartite)
+library(ggalluvial)
+library(htmlwidgets)
+library(htmltools)
+
+
+dados <- read.csv("dados_campo.csv", header=T,sep=";")
+head(dados)
+dados$lat <- as.numeric(sub(",", ".", sub(".", "", dados$lat, fixed=TRUE), fixed=TRUE))
+dados$long <- as.numeric(sub(",", ".", sub(".", "", dados$long, fixed=TRUE), fixed=TRUE))
+dados$lat.1 <- as.numeric(sub(",", ".", sub(".", "", dados$lat.1, fixed=TRUE), fixed=TRUE))
+dados$long.1 <- as.numeric(sub(",", ".", sub(".", "", dados$long.1, fixed=TRUE), fixed=TRUE))
+
+dados$Idade
+dados <- dados %>% mutate(grupo_etario_oms = case_when(
+  Idade < 25 & Idade >= 18 ~ "Jovem_18-24" ,
+  Idade < 45 & Idade >= 25 ~ "Adulto_jovem_25-44"  ,
+  Idade < 60 & Idade >= 45 ~ "Meia_idade_45-59"  ,
+  Idade < 74 & Idade >= 60 ~ "Idoso_60-74"  ,
+  Idade < 90 & Idade >= 74 ~ "Ancião_75-90"))
+
+dados <- dados %>%
+  mutate(grupo_etario_oms = fct_relevel(grupo_etario_oms, 
+                                        'Jovem_18-24', 'Adulto_jovem_25-44', 
+                                        'Meia_idade_45-59','Idoso_60-74','Ancião_75-90')) 
+dados$Idade
+
+tabelita <- normality(dados)
+
+dados <- dados[complete.cases(dados$Idade), ] 
+dados <- dados[complete.cases(dados$lat.1), ] 
+dados <- dados[complete.cases(dados$long.1), ] 
+
+dados$Mudanca_clima
+dados <- dados[complete.cases(dados$grupo_etario_oms), ] 
+dados <- dados[complete.cases(dados$Mudanca_clima), ] 
+
+#### Plot como entrevistados veem se houve mudança clima de acordo com idade e grupo etario
+p <- ggplot(dados, aes(x=grupo_etario_oms,
+                       y=Idade)) +
+  geom_jitter(width = 0.5, size = 2) +
+  aes(col = Mudanca_clima) +
+  scale_fill_viridis(discrete = T, option="C") + 
+  scale_colour_viridis(discrete = T, option="D") +
+  geom_point() +
+  theme(legend.position="none")+
+  theme_bw(base_size = 13) 
+plot.new()
+dev.off()
+#### Plot como entrevistados veem se houve mudança clima de acordo com idade e grupo etario
+dados
+p2 <- ggplot(dados, aes(x=grupo_etario_oms,
+                       y=Prod_anual_kg)) +
+  geom_jitter(width = 0.5, size = 2) +
+  aes(col = Sexo) +
+  scale_fill_viridis(discrete = T, option="C") + 
+  scale_colour_viridis(discrete = T, option="D") +
+  geom_point() +
+  theme(legend.position="none")+
+  theme_bw(base_size = 13) 
+
+### Separe dados climate change
+dados_climate_change <- dados %>% 
+  select(Aumento_arauc,Pq_aum_ou_dim,Condicoes_des_arauc,Localizacao_preferencial, Area_encontro_araucaria_mud_clim,Mudanca_clima,descricao_mudanca,
+         Producao_pinhao,Justificativa_Prod_Pinhao,grupo_etario_oms,
+         Intervalo_de_producao_meses,Estimativa_abundancia_arauc)
+
+dados_climate_change$Intervalo_de_producao_meses <- as.character(sub("_-_", "_", sub(".", "", dados$Intervalo_de_producao_meses, fixed=TRUE), fixed=TRUE))
+
+#############
+climate_change <- dados_climate_change %>%
+  group_by(Aumento_arauc,Pq_aum_ou_dim)%>%
+  summarize(n=n())%>%
+  mutate(pct = n/sum(n),
+         lbl = scales::percent(pct))
+climate_change <- read.csv("pontos_diagrama.csv", header=T,sep="")
+
+#write.csv(climate_change, file = "pontos_diagrama.csv")
+
+colnames(climate_change) <- c("source", "target", "value")
+climate_change$target <- paste(climate_change$target, "", sep="")
+
+nodes_led <- data.frame(name=c(as.character(climate_change$source),
+                               as.character(climate_change$target)) %>% 
+                          unique())
+# With networkD3, connection must be provided using id, not using real name like in the links dataframe.. So we need to reformat it.
+climate_change$IDsource=match(climate_change$source, nodes_led$name)-1 
+climate_change$IDtarget=match(climate_change$target, nodes_led$name)-1
+
+nodes_led$name <- gsub(" ", "", nodes_led$name)
+
+
+ColourScal_led ='d3.scaleOrdinal() .range(["FDE725FF","#B4DE2CFF","#6DCD59FF","#35B779FF","#1F9E89FF","#26828EFF","#31688EFF","#3E4A89FF","#482878FF","#440154FF"])'
+
+# Make the Network
+d1_led <- sankeyNetwork(Links = climate_change, Nodes = nodes_led,
+                        #colourScale = ColourScal_led,
+                        Source = "IDsource", Target = "IDtarget",
+                        Value = "value", NodeID = "name", 
+                        sinksRight=F, nodeWidth=50,
+                        fontSize=20, nodePadding=35)
+
+################
+
+### Alluvial  agora foi caraaaaaaaaalho
+
+
+# create alternative alluvial diagram
+library(ggplot2)
+library(ggalluvial)
+
+floyd <- dados_climate_change %>%
+  #filter(as.logical(dados_climate_change$grupo_etario_oms)) %>%
+  select(Localizacao_preferencial,Mudanca_clima, Area_encontro_araucaria_mud_clim)
+
+floyd2 <- floyd %>%
+  group_by(Localizacao_preferencial,Mudanca_clima, Area_encontro_araucaria_mud_clim) %>%
+  summarize(freq = n())
+
+#write.csv(floyd, file = "pontos_diagrama_aluvial_2.csv")
+floyd2 <- read.csv("pontos_diagrama_aluvial_2.csv", header=T,sep="")
+floyd <- floyd2 %>%
+  select(Preferred.location,Did.climate.change., Where.araucaria.will.be.under.climate.change.)
+
+colnames(floyd) <- c("Preferred_location", "Did_climate_change", "Where_araucaria_will_be_under_climate_change")
+
+floyd2 <- floyd %>%
+  group_by(Preferred_location,Did_climate_change, Where_araucaria_will_be_under_climate_change) %>%
+  summarize(freq = n())
+floyd2$Preferred_location
+floyd2 <- floyd2 %>%
+mutate(Preferred_location = fct_relevel(Preferred_location, 
+                                     'Anywhere','Colder areas', 'Colder/Forested areas', 
+                                     'Did not answer','Colder/wet areas','Forested areas',
+                                     'Grasslands','Generalist','Grasslands/Colder areas',
+                                     'Higher altitude','Grasslands/Slopes/Valleys',
+                                     'Higher altitude/Colder areas','Higher altitude/Grasslands',
+                                     'Water bodies','Slopes/Valleys')) 
+
+doors <- ggplot(floyd2,
+                aes(axis1 = Did_climate_change,
+                    axis2 = Preferred_location,
+                    axis3 = Where_araucaria_will_be_under_climate_change,
+                    y = freq)) +
+  geom_alluvium(aes(alpha=Where_araucaria_will_be_under_climate_change,
+                    fill = Preferred_location), absolute = T) +
+  geom_stratum(alpha=0.5) +
+  #geom_text(stat = "stratum", aes(label = after_stat(stratum)),
+  #          absolute = FALSE) +
+  #geom_stratum(absolute = FALSE) +
+  geom_label(stat = "stratum", aes(label = after_stat(stratum)),absolute=T) +
+  scale_x_discrete(limits = c("Did climate change?", "Preferred location for the species", 
+                              "Where araucaria will be\nunder climate change?"),expand = c(0.05, 0.05)) +
+  scale_fill_viridis(discrete = T, option="C") +
+  labs(title = "Local perceptions about climate change for Araucaria",
+       y = "Frequency") +
+  theme_minimal() +
+  theme_bw(base_size = 20) +
+  theme(legend.position = "none") 
+
+ggsave(file=paste0("./outputs/grafico_aluvial_climate_change.png"),
+       plot=doors,width=16,height=12,dpi="print")
+
+ggsave(file=paste0("./outputs/grafico_aluvial_climate_change.pdf"),
+       plot=doors,width=16,height=12,dpi="print")
+
+
+#### dendogram for ethnovarieties
+
+# Library
+library(tidyverse)
+
+# Data
+head(mtcars)
+purple <- read.csv("variedades_para_diagrama.csv", header=T,sep=";")
+str(purple)
+#purple <- purple[,-(7:9),drop=FALSE]  # still a data.frame
+colnames(purple) <- c("Varieties", "Number_citations", "More_abundant",
+                      "Rarest","Harvest_beginning","End_harvest","Region",
+                      "Colour")
+rownames(purple) <- c("Macaco","Comum",
+                      "Do Cedo","Do Tarde","Cajuva",
+                      "Cajuva Macaco","Cajuva Preto",
+                      "Falha Branca","25 de marco",
+                      "Branco","Vermelho","25 de abril",
+                      "São José","Doce","Farinha",
+                      "Mico","Amendoim",
+                      "Safrinha","Geada","1 de abril",
+                      "Caiano","Roxo")
+purple <- purple[,-1,drop=FALSE]  # still a data.frame
+
+#purple <- purple[-c(23), ]
+purple2 <- purple %>%
+  #filter(as.logical(dados_climate_change$grupo_etario_oms)) %>%
+  select(Number_citations,More_abundant, Rarest,Harvest_beginning,End_harvest)
+
+#purple <- purple[,-(1),drop=FALSE]  # still a data.frame
+
+# Clusterisation using 3 variables
+
+library(dendextend)
+viridis(5)
+
+purple %>% 
+  select(Number_citations, More_abundant,Rarest,Harvest_beginning,End_harvest,Region,Colour) %>% 
+  dist() %>% 
+  hclust() %>% 
+  as.dendrogram() -> dend
+
+# Plot
+
+library(ggplot2)
+library(ggdendro)
+
+
+par(mar=c(7,3,1,1))  # Increase bottom margin to have the complete label
+dend %>% 
+  set("nodes_pch", 19)  %>% 
+  set("nodes_cex", 1) %>% 
+  set("nodes_col", "yellow") %>% 
+  set("branches_lwd", 3) %>% 
+  #xlab = "Ethnovarieties" %>%
+  #ylab = "Number of citations" %>%
+  #main = "Dendogram of all described ethnovarieties" %>%
+  set("labels_col", value = c("#440154FF","#3B528BFF","#21908CFF","#5DC863FF"), k=4) %>%
+  set("branches_k_color", value = c("#440154FF","#3B528BFF","#21908CFF","#5DC863FF"), k = 4) %>%
+  #plot(horiz=TRUE, axes=T) %>%
+  plot(main="Dendogram of all described ethnovarieties") 
+
+#### It won'n work
+ggsave(file=paste0("./outputs/dendo.png"),
+       plot=dend,width=14,height=12,dpi="print")
+ggsave(file=paste0("./outputs/dendo.pdf"),
+       plot=dend,width=14,height=12,dpi="print")
+
+### heat map production seeds
+
+# Heatmap 
+calor <- read.csv("tempo_production.csv", header=T,sep=";")
+glimpse(calor)
+calor <- calor %>% 
+  rename(
+    Ethnovarieties  = ï..Ethnovarieties,
+    Pinhão.production = Seed.production
+  )
+
+calor$Ethnovarieties = factor(calor$Ethnovarieties,
+                         levels = c("25 de MarÃ§o","Do Cedo","SaoJose","Comum","Do Tarde",
+                                     "CajuvÃ¡","Macaco","All_varieties"),
+                         labels = c("25 de Março","Do Cedo","São José","Comum",
+                                     "Do Tarde","Cajuvá","Macaco","All varieties"))
+calor$Pinhão.production = factor(calor$Pinhão.production,
+                              levels = c("March-April","March-April","March-April",
+                                         "March-May","May-June","May-July","August-December",
+                                         "March-December"),
+                              labels = c("March|April","March|April","March|April",
+                                         "March|May","May|June","May|July","August|December",
+                                         "March|December"))
+a5 <- ggplot(data = calor) +
+  aes(x=Pinhão.production, y=Ethnovarieties, fill= Ethnovarieties) + 
+  scale_fill_viridis(discrete=T,option='D') +
+  #scale_fill_brewer(palette = "Paired") +
+  geom_tile() +
+  #geom_hline(yintercept = mean(n1$Nível.de.gordura.visceral), linetype = 2)+ # Add horizontal line at base mean
+  #geom_hline(aes(yintercept=quantile(Nível.de.gordura.visceral,0.975)),color="blue",linetype="dashed") +
+  #geom_hline(aes(yintercept=quantile(Nível.de.gordura.visceral,0.025)),color="blue",linetype="dashed") +
+  #stat_compare_means(method = "kruskal.test", label.y= 22) +
+  #stat_compare_means(label = "p.signif", method ="wilcox.test") +
+  labs(col = "Ethnovarieties") +
+  labs(title = "Reproductive phenology of pinhão production") +
+  labs(x="Peak production of each ethnovariety", y = "Most cited ethnovarieties") +
+  theme_bw(base_size = 13) +
+  theme(legend.position = "none")
+  
+  #theme_bw(base_size = 13)
+ggsave(file=paste0("./outputs/Pinhão_production.png"),
+       plot=a5,dpi=320)
+
+############## pinhão per year
+pino <- read.csv("ibge_pinhao_kg_year.csv", header=T,sep=";")
+head(pino)
+pino <- pino %>% 
+  rename(
+    State  = ï..State,
+    Production_kg = Production..kg.
+  )
+pino$State = factor(pino$State,
+                              levels = c("Minas Gerais","SÃ£o Paulo", "ParanÃ¡","Santa Catarina",
+                                         "Rio Grande do Sul"),
+                              labels = c("Minas Gerais","São Paulo","Paraná","Santa Catarina",
+                                         "Rio Grande do Sul"))
+summary(pino$Production_kg)
+#Create tibble with labels
+viridis_pal(option = "C")(5)
+
+tibble(Year = 2019,
+       Production_kg = c(9600, 7400, 7200, 4100, 800),
+       State = c("MG", "SP", "PR", "SC", "RS"),
+       colores = c("#0D0887FF", "#7E03A8FF", "#CC4678FF", "#F89441FF", "#F0F921FF")) -> labels
+
+#tibble for geom_richtext
+tibble(x = 2012.5, 
+       y = 10500,
+       text = "<span style='color:#252031;font-size:30px;'>(a) Pinhão production (tonnes)</span><br><span style='color:#5C4D7D;'>Between 2010-2019.</span>"
+) -> title
+
+pino %>% 
+  filter(State %in% c("Minas Gerais", "São Paulo", "Paraná", "Santa Catarina", "Rio Grande do Sul")) %>% 
+  mutate(State = factor(State, levels = c("MG", "SP", "PR", "SC", "RS"))) -> pinos  
+
+
+go <- ggplot() +
+  geom_area(pino, 
+            mapping = aes(Year, Production_kg, fill = State),
+            extra_span = 1,
+            type = "ridge",
+            show.legend = FALSE) +
+  scale_y_continuous(labels = label_number_si()) +
+  geom_text(labels, 
+            mapping = aes(Year, Production_kg, 
+                          label = State, 
+                          color = colores), 
+            hjust = 0,
+            vjust = 1,
+            family = "IBM Plex Sans") +
+  geom_richtext(title, mapping = aes(x = x, y = y, label = text),
+                hjust = .5,
+                family = "IBM Plex Sans",
+                color = NA,
+                fill = NA,
+                size = 5) +
+  scale_x_continuous(breaks = seq(2010, 2019, 3), limits = c(2010, 2019)) +
+  scale_fill_manual(values = c("#0D0887FF", "#7E03A8FF", "#CC4678FF", "#F89441FF", "#F0F921FF")) +
+  scale_color_identity() +
+  labs(x = NULL, y = "Pinhão gathering (tonnes)") +
+  coord_cartesian(expand = TRUE, clip = "off") +
+  theme(plot.margin = margin(25, 25, 20, 25),
+        plot.title.position = "plot",
+        plot.caption.position = "plot",
+        panel.background = element_rect("#F5F5F5"),
+        plot.background = element_rect("#F5F5F5"),
+        panel.grid.minor = element_blank(),
+        panel.grid.major.x = element_blank(),
+        plot.caption = ggtext::element_markdown(color = "#291600",
+                                                family = "IBM Plex Sans"),
+        axis.text = element_text(family = "IBM Plex Sans"))+
+  theme_bw(base_size = 15)
+
+ggsave(file=paste0("./outputs/pinhão_prodc.png"),
+       plot=go,dpi=320, units = "cm")
+
+### todos juntos
+
+################ $$$$ per yerar pinhao
+viridis_pal(option = "D")(5)
+tibble(Year = 2019,
+       Extraction_value = c(28800, 25500, 24500, 14600, 3500),
+       State = c("MG", "SP", "PR", "SC", "RS"),
+       colores = c("#440154FF", "#3B528BFF", "#21908CFF", "#5DC863FF", "#FDE725FF")) -> labels
+
+#tibble for geom_richtext
+tibble(x = 2012.5, 
+       y = 28500,
+       text = "<span style='color:#252031;font-size:30px;'>(b) Pinhão trade (R$ *10³)</span><br><span style='color:#5C4D7D;'>Between 2010-2019.</span>"
+) -> title
+
+pino %>% 
+  filter(State %in% c("Minas Gerais", "São Paulo", "Paraná", "Santa Catarina", "Rio Grande do Sul")) %>% 
+  mutate(State = factor(State, levels = c("MG", "SP", "PR", "SC", "RS"))) -> pinos  
+
+gole <- ggplot() +
+  geom_area(pino,
+            mapping = aes(Year, Extraction_value, fill = State),
+            extra_span = 1,
+            type = "ridge",
+            show.legend = FALSE) +
+  scale_y_continuous(labels = label_number_si())+
+  geom_text(labels, 
+            mapping = aes(Year, Extraction_value, 
+                          label = State, 
+                          color = colores), 
+            hjust = 0,
+            vjust = 1,
+            family = "IBM Plex Sans") +
+  geom_richtext(title, mapping = aes(x = x, y = y, label = text),
+                hjust = .5,
+                family = "IBM Plex Sans",
+                color = NA,
+                fill = NA,
+                size = 5) +
+  scale_x_continuous(breaks = seq(2010, 2019, 3), limits = c(2010, 2019)) +
+  scale_fill_manual(values = c("#440154FF", "#3B528BFF", "#21908CFF", "#5DC863FF", "#FDE725FF")) +
+  scale_color_identity() +
+  labs(x = NULL, y = "Pinhão trade (R$)") +
+  coord_cartesian(expand = TRUE, clip = "off") +
+  theme(plot.margin = margin(25, 25, 20, 25),
+        plot.title.position = "plot",
+        plot.caption.position = "plot",
+        panel.background = element_rect("#F5F5F5"),
+        plot.background = element_rect("#F5F5F5"),
+        panel.grid.minor = element_blank(),
+        panel.grid.major.x = element_blank(),
+        plot.caption = ggtext::element_markdown(color = "#291600",
+                                                family = "IBM Plex Sans"),
+        axis.text = element_text(family = "IBM Plex Sans"))+
+  theme_bw(base_size = 15)
+
+ggsave(file=paste0("./outputs/pinhão_money.png"),
+       plot=gole,dpi=320, units = "cm")
+ggsave(file=paste0("./outputs/pinhão_money.pdf"),
+       plot=gole)
+############## Enf_of_the_code_grab_a_beer_and_be_happy
