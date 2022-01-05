@@ -17,7 +17,7 @@ Data can be found in the `data` folder. The `cap_etno` folder includes the `.csv
 
 All the results are saved in the `outputs` folder.
 
-<img alt="Letis" src="outputs/production_cost_pinhao" width="500">
+<img alt="production_cost_pinhao" src="outputs/production_cost_pinhao" width="500">
 
 Figure 1: **The production and value (US$) of pinhao production**.
 
