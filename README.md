@@ -21,9 +21,9 @@ All the results are saved in the `outputs` folder.
 
 Figure 1: **The production and value (US$) of pinhao production**.
 
-<img alt="Current_and_projected_connectivity" src="outputs/Figure_4_tif.tif" width="1000">
+<img alt="Ecosystem_services_potential_loss_climate_change_via_TEK" src="outputs/network_ecosystem_services_light.png" width="1000">
 
-Figure 2: **Current and projected connectivity**.
+Figure 2: **Potential lost of ecosystem services due to climate change perceived by TEK holders**.
 ## License
 
 Data and R script are available under the GNU General Public License version 3 (see `LICENSE` file).
