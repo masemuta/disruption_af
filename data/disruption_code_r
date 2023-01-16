@@ -1,4 +1,4 @@
-setwd("D:/OneDrive/Doutorado_2020/Cap_5")
+setwd("use_your_wd")
 
 ## call packages
 
@@ -9,17 +9,9 @@ library(data.table)
 library(tidyr)
 library(readr)
 library(devtools)
-library(skimr)
-library(dlookr)
-library(chron)
 library(tidyverse)
 require(ggplot2)
-require(network)
 require(igraph)
-require(sna)
-require(ggnet)
-require(ergm)
-require(intergraph)
 require(RColorBrewer)
 library(hrbrthemes)
 library(ggalt)
@@ -133,8 +125,7 @@ d1_led <- sankeyNetwork(Links = climate_change, Nodes = nodes_led,
 
 ################
 
-### Alluvial  agora foi caraaaaaaaaalho
-
+### Alluvial
 
 # create alternative alluvial diagram
 library(ggplot2)
@@ -166,7 +157,7 @@ mutate(Preferred_location = fct_relevel(Preferred_location,
                                      'Grasslands','Generalist','Grasslands/Colder areas',
                                      'Higher altitude','Grasslands/Slopes/Valleys',
                                      'Higher altitude/Colder areas','Higher altitude/Grasslands',
-                                     'Water bodies','Slopes/Valleys')) 
+                                     'Water bodies','Slopes/Valleys'))
 
 doors <- ggplot(floyd2,
                 aes(axis1 = Did_climate_change,
@@ -181,7 +172,7 @@ doors <- ggplot(floyd2,
   #geom_stratum(absolute = FALSE) +
   geom_label(stat = "stratum", aes(label = after_stat(stratum)),absolute=T) +
   scale_x_discrete(limits = c("Did climate change?", "Preferred location for the species", 
-                              "Where araucaria will be\nunder climate change?"),expand = c(0.05, 0.05)) +
+                              "Where  will araucaria be\nunder climate change?"),expand = c(0.05, 0.05)) +
   scale_fill_viridis(discrete = T, option="C") +
   labs(title = "Local perceptions about climate change for Araucaria",
        y = "Frequency") +
@@ -189,12 +180,11 @@ doors <- ggplot(floyd2,
   theme_bw(base_size = 20) +
   theme(legend.position = "none") 
 
-ggsave(file=paste0("./outputs/grafico_aluvial_climate_change.png"),
+ggsave(file=paste0("./outputs/grafico_aluvial_climate_changenew.png"),
        plot=doors,width=16,height=12,dpi="print")
 
 ggsave(file=paste0("./outputs/grafico_aluvial_climate_change.pdf"),
        plot=doors,width=16,height=12,dpi="print")
-
 
 #### dendogram for ethnovarieties
 
@@ -242,7 +232,7 @@ purple %>%
 
 library(ggplot2)
 library(ggdendro)
-
+library(ggtext)
 
 par(mar=c(7,3,1,1))  # Increase bottom margin to have the complete label
 dend %>% 
@@ -254,7 +244,7 @@ dend %>%
   #ylab = "Number of citations" %>%
   #main = "Dendogram of all described ethnovarieties" %>%
   set("labels_col", value = c("#440154FF","#3B528BFF","#21908CFF","#5DC863FF"), k=4) %>%
-  set("branches_k_color", value = c("#440154FF","#3B528BFF","#21908CFF","#5DC863FF"), k = 4) %>%
+  set("branches_k_color", value = c("#440154FF","#3B528BFF","#21908CFF","#5DC863FF"), k=4) %>%
   #plot(horiz=TRUE, axes=T) %>%
   plot(main="Dendogram of all described ethnovarieties") 
 
@@ -321,18 +311,22 @@ pino$State = factor(pino$State,
                               labels = c("Minas Gerais","São Paulo","Paraná","Santa Catarina",
                                          "Rio Grande do Sul"))
 summary(pino$Production_kg)
-#Create tibble with labels
-viridis_pal(option = "C")(5)
+install.packages("scales")
+library(scales)
 
-tibble(Year = 2019,
-       Production_kg = c(9600, 7400, 7200, 4100, 800),
+#Create tibble with labels
+viridis_pal(option = "C")(25)
+
+
+ tibble(Year = 2021,
+       Production_kg = c(12750, 9500, 9100, 5000, 1200),
        State = c("MG", "SP", "PR", "SC", "RS"),
-       colores = c("#0D0887FF", "#7E03A8FF", "#CC4678FF", "#F89441FF", "#F0F921FF")) -> labels
+       colores = c("#0D0887FF", "#7E03A8FF", "#CC4678FF", "#F89441FF", "#FBD424FF")) -> labels
 
 #tibble for geom_richtext
-tibble(x = 2012.5, 
-       y = 10500,
-       text = "<span style='color:#252031;font-size:30px;'>(a) Pinhão production (tonnes)</span><br><span style='color:#5C4D7D;'>Between 2010-2019.</span>"
+tibble(x = 2014, 
+       y = 11500,
+       text = "<span style='color:#252031;font-size:40px;'>(a) Pinhão production (tonnes)</span><br><span style='color:#5C4D7D;'>Between 2010-2021.</span>"
 ) -> title
 
 pino %>% 
@@ -360,10 +354,10 @@ go <- ggplot() +
                 color = NA,
                 fill = NA,
                 size = 5) +
-  scale_x_continuous(breaks = seq(2010, 2019, 3), limits = c(2010, 2019)) +
-  scale_fill_manual(values = c("#0D0887FF", "#7E03A8FF", "#CC4678FF", "#F89441FF", "#F0F921FF")) +
+  scale_x_continuous(breaks = seq(2010, 2021, 1), limits = c(2010, 2021)) +
+  scale_fill_manual(values = c("#0D0887FF", "#7E03A8FF", "#CC4678FF", "#F89441FF", "#FBD424FF")) +
   scale_color_identity() +
-  labs(x = NULL, y = "Pinhão gathering (tonnes)") +
+  labs(x = NULL, y = "Pinhão gathering (kg x 1000)") +
   coord_cartesian(expand = TRUE, clip = "off") +
   theme(plot.margin = margin(25, 25, 20, 25),
         plot.title.position = "plot",
@@ -375,24 +369,24 @@ go <- ggplot() +
         plot.caption = ggtext::element_markdown(color = "#291600",
                                                 family = "IBM Plex Sans"),
         axis.text = element_text(family = "IBM Plex Sans"))+
-  theme_bw(base_size = 15)
-
-ggsave(file=paste0("./outputs/pinhão_prodc.png"),
+  theme_bw(base_size = 20)
+go
+ggsave(file=paste0("./outputs/pinhão_prodcreview.png"),
        plot=go,dpi=320, units = "cm")
 
 ### todos juntos
 
 ################ $$$$ per yerar pinhao
 viridis_pal(option = "D")(5)
-tibble(Year = 2019,
-       Extraction_value = c(28800, 25500, 24500, 14600, 3500),
+tibble(Year = 2021,
+       Extraction_value = c(44500, 34500, 33000, 16500, 6100),
        State = c("MG", "SP", "PR", "SC", "RS"),
-       colores = c("#440154FF", "#3B528BFF", "#21908CFF", "#5DC863FF", "#FDE725FF")) -> labels
+       colores = c("#440154FF", "#3B528BFF", "#21908CFF", "#5DC863FF", "#FBD424FF")) -> labels
 
 #tibble for geom_richtext
-tibble(x = 2012.5, 
-       y = 28500,
-       text = "<span style='color:#252031;font-size:30px;'>(b) Pinhão trade (R$ *10³)</span><br><span style='color:#5C4D7D;'>Between 2010-2019.</span>"
+tibble(x = 2014, 
+       y = 40000,
+       text = "<span style='color:#252031;font-size:40px;'>(b) Pinhão trade (R$ *10³)</span><br><span style='color:#5C4D7D;'>Between 2010-2021.</span>"
 ) -> title
 
 pino %>% 
@@ -419,8 +413,8 @@ gole <- ggplot() +
                 color = NA,
                 fill = NA,
                 size = 5) +
-  scale_x_continuous(breaks = seq(2010, 2019, 3), limits = c(2010, 2019)) +
-  scale_fill_manual(values = c("#440154FF", "#3B528BFF", "#21908CFF", "#5DC863FF", "#FDE725FF")) +
+  scale_x_continuous(breaks = seq(2010, 2021, 1), limits = c(2010, 2021)) +
+  scale_fill_manual(values = c("#440154FF", "#3B528BFF", "#21908CFF", "#5DC863FF", "#FBD424FF")) +
   scale_color_identity() +
   labs(x = NULL, y = "Pinhão trade (R$)") +
   coord_cartesian(expand = TRUE, clip = "off") +
@@ -434,10 +428,14 @@ gole <- ggplot() +
         plot.caption = ggtext::element_markdown(color = "#291600",
                                                 family = "IBM Plex Sans"),
         axis.text = element_text(family = "IBM Plex Sans"))+
-  theme_bw(base_size = 15)
-
-ggsave(file=paste0("./outputs/pinhão_money.png"),
+  theme_bw(base_size = 20)
+gole
+ggsave(file=paste0("./outputs/pinhão_money_review.png"),
        plot=gole,dpi=320, units = "cm")
-ggsave(file=paste0("./outputs/pinhão_money.pdf"),
-       plot=gole)
-############## Enf_of_the_code_grab_a_beer_and_be_happy
+
+library(gridExtra)
+### todos juntos
+g5 <- grid.arrange( go, gole, ncol=2)
+
+ggsave(file=paste0("./outputs/production_cost_pinhao_review.png"),
+       plot=g5,width=20,height=10,dpi="print")
