@@ -1,11 +1,11 @@
 # Disruption Araucaria Forest
 
 
-# Disrupting a socioecological system: how Traditional Ecological Knowledge could be the key to preserve Araucaria Forest in Brazil under climate change?
+#
 
 The R script `R/r_script.R` can be run to reproduce the results of the following study:
 
-**Mario M. Tagliari*, Juliano A. Bogoni, Graziela D. Blanco, Aline P. Cruz, Nivaldo Peroni**. 2022. 
+****. 2022. 
 
 To run the script, you can either execute the `araucaria_2020.sh` shellscript file or run the R script under a R GUI such as RStudio.
 
